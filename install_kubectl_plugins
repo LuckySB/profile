@@ -1,0 +1,48 @@
+#!/bin/bash
+
+if [ ! -f ~/.krew/bin/kubectl-krew ]; then
+
+  set -x; cd "$(mktemp -d)"
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.tar.gz"
+  tar zxvf krew.tar.gz
+  KREW=./krew-"$(uname | tr '[:upper:]' '[:lower:]')_amd64"
+  "$KREW" install krew
+  echo 'export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"' >> ~/.bash_profile
+  echo 'export KUBECTX_CURRENT_FGCOLOR=$(tput setaf 2 || true)' >> ~/.bash_profile
+fi
+
+kubectl krew install ctx
+kubectl krew install ns
+
+if [ ! -f ~/kube-ps1.sh ]; then
+  cd "$(mktemp -d)"
+  curl -fsSLO https://github.com/jonmosco/kube-ps1/archive/v0.7.0.tar.gz
+  tar zxvf v0.7.0.tar.gz
+  cp kube-ps1-0.7.0/kube-ps1.sh ~/
+
+cat <<EOF >>~/.bash_profile
+
+export KUBE_PS1_SYMBOL_ENABLE=false
+export KUBE_PS1_CTX_COLOR=""
+export KUBE_PS1_NS_COLOR=green
+export KUBE_PS1_DIVIDER=/
+
+. ~/kube-ps1.sh
+
+PS_CYAN='\[\033[00;36m\]';
+PS_RESTORE='\[\033[0m\]';
+
+if [ "$(id -u)" = "0" ]; then
+  SETCOLOR_USER='\[ESC[1;31m\]';
+  SET_SEP='# ';
+else
+  SETCOLOR_USER='\[ESC[1;32m\]';
+  SET_SEP="$ ";
+fi;
+alias ctx='k ctx'
+alias ns='k ns'
+
+export PS1="${PS_CYAN}[\$(kube_ps1) ${PS_CYAN}\w]${SET_SEP}${PS_RESTORE}";
+EOF
+
+fi
